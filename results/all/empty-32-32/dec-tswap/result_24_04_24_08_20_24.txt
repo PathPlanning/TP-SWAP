@@ -1,0 +1,1 @@
+success  collision  collision_obst   makespan   flowtime    runtime     number

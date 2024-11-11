@@ -1,0 +1,6 @@
+.DS_Store
+__pycache__/
+launching/img/*.gif
+launching/img/*.mp4
+gen-scripts/**/*.xml
+gen-scripts/**/*.map
