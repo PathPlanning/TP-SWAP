@@ -73,4 +73,6 @@ class Node:
         """
         Compares the keys (i.e., the f-values) of two nodes, needed for sorting/extracting the best element from OPEN.
         """
+        if self.f == other.f:
+            return self.g > other.g
         return self.f < other.f

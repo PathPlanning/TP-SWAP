@@ -1,179 +1,99 @@
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
-from manavlib.gen.params import DiscreteAgentParams, BaseAlgParams
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Type, Union, Any
+from manavlib.common.params import BaseDiscreteAgentParams, BaseAlgParams
 import numpy.typing as npt
-from enum import Enum
 import numpy as np
-import random
-
-from dec_tswap.map import Map
-from dec_tswap.astar_algorithm import astar_search, manhattan_distance, make_path
-
-
-class DecTSWAPParams(BaseAlgParams):
-    def __init__(self) -> None:
-        super().__init__()
-        pass
-
-
-class Message:
-    def __init__(self):
-        self.pos: npt.NDArray | None = None
-        self.next_pos: npt.NDArray | None = None
-        self.priority: int | None = None
-
-
-class Action(Enum):
-    WAIT = (0, 0)
-    UP = (-1, 0)
-    DOWN = (1, 0)
-    LEFT = (0, -1)
-    RIGHT = (0, 1)
+from dec_tswap.message import Message
+from dec_tswap.action import Action
+from dec_tswap.path_table import PathTable
 
 
 class Agent:
-    def __init__(self,
-                 a_id: int,
-                 ag_params: DiscreteAgentParams,
-                 alg_params: BaseAlgParams,
-                 grid_map: npt.NDArray,
-                 goals: npt.NDArray):
+    """
+    A base class for representing an agent in a multi-agent navigation system.
+    """
+
+    def __init__(
+        self,
+        a_id: int,
+        pos: npt.NDArray,
+        ag_params: BaseDiscreteAgentParams,
+        alg_params: BaseAlgParams,
+        grid_map: npt.NDArray,
+        goals: npt.NDArray,
+        search_object: Optional[PathTable],
+    ):
+        """
+        Initialize agent's attributes.
+
+        Parameters
+        ----------
+        a_id : int
+            The agent's unique identifier.
+        pos : np.ndarray
+            The current position of the agent on the grid.
+        ag_params : BaseDiscreteAgentParams
+            Agent-specific parameters.
+        alg_params : BaseAlgParams
+            Algorithm-related parameters.
+        grid_map : np.ndarray
+            The grid map where the agent navigates.
+        goals : np.ndarray
+            Array containing the agent's possible goal positions.
+        search_object : Optional[PathTable]
+            Search object for precomputed shortest paths, if needed.
+        """
         self.a_id = a_id
+        self.pos = pos
         self.ag_params = ag_params
         self.alg_params = alg_params
         self.grid_map = grid_map
         self.goals = goals
+        self.search_object = search_object
+
+    def initialize(self) -> bool:
+        """Initializes the agent"""
+        raise NotImplementedError
 
     def update_neighbors_info(self, neighbors_info: List[Message]) -> None:
+        """
+        Updates information about neighboring agents based on received messages.
+
+        Parameters
+        ----------
+        neighbors_info : List[Message]
+            List of messages containing state information from neighboring agents.
+        """
         raise NotImplementedError
 
     def compute_action(self) -> Action:
+        """
+        Computes the next action for the agent based on its current state and environment.
+
+        Returns
+        -------
+        Action
+            The computed action that the agent should take.
+        """
         raise NotImplementedError
 
     def update_state_info(self, new_pos: npt.NDArray) -> None:
+        """
+        Updates the agent's state information, specifically its position on the grid.
+
+        Parameters
+        ----------
+        new_pos : np.ndarray
+            The new position of the agent as a NumPy array [i, j].
+        """
         raise NotImplementedError
 
     def send_message(self) -> Message:
+        """
+        Creates and returns a message containing the agent's current state information.
+
+        Returns
+        -------
+        Message
+            A message containing the agent's current position, goal, and other relevant data.
+        """
         raise NotImplementedError
-
-
-class RandomAgent(Agent):
-    def __init__(self,
-                 a_id: int,
-                 ag_params: DiscreteAgentParams,
-                 alg_params: BaseAlgParams,
-                 grid_map: npt.NDArray,
-                 goals: npt.NDArray):
-        super().__init__(a_id, ag_params, alg_params, grid_map, goals)
-        pass
-
-    def update_neighbors_info(self, neighbors_info: List[Message]) -> None:
-        pass
-
-    def compute_action(self) -> npt.NDArray:
-        return np.array(random.choice(list(Action)).value)
-
-    def update_state_info(self, new_pos: npt.NDArray) -> None:
-        pass
-
-    def send_message(self) -> Message:
-        return Message()
-
-
-class SmartRandomAgent(Agent):
-    def __init__(self,
-                 a_id: int,
-                 ag_params: DiscreteAgentParams,
-                 alg_params: BaseAlgParams,
-                 grid_map: npt.NDArray,
-                 goals: npt.NDArray):
-        super().__init__(a_id, ag_params, alg_params, grid_map, goals)
-        self.pos = None
-
-    def update_neighbors_info(self, neighbors_info: List[Message]) -> None:
-        pass
-
-    def compute_action(self) -> npt.NDArray:
-        actions = list(Action)
-        actions.remove(Action.WAIT)
-        while len(actions):
-            action = random.choice(actions)
-            actions.remove(action)
-            action = np.array(action.value)
-            predicted_pos = self.pos + action
-            h, w = self.grid_map.shape
-            i, j = predicted_pos
-            if not ((0 <= i < h) and (0 <= j < w)):
-                continue
-            if self.grid_map[i, j]:
-                continue
-
-            return action
-
-        return np.array(Action.WAIT.value)
-
-    def update_state_info(self, new_pos: npt.NDArray) -> None:
-        self.pos = new_pos
-
-    def send_message(self) -> Message:
-        return Message()
-
-
-class AStarAgent(Agent):
-    def __init__(self,
-                 a_id: int,
-                 ag_params: DiscreteAgentParams,
-                 alg_params: BaseAlgParams,
-                 grid_map: npt.NDArray,
-                 goals: npt.NDArray):
-        super().__init__(a_id, ag_params, alg_params, grid_map, goals)
-        self.pos = None
-        self.neighbors_info = None
-        self.path = []
-        self.goal_chosen = False
-        self.goal = None
-        self.search_map = Map(self.grid_map)
-        self.path_exist = False
-
-    def update_neighbors_info(self, neighbors_info: List[Message]) -> None:
-        self.neighbors_info = neighbors_info
-
-    def compute_action(self) -> npt.NDArray:
-
-        if not self.goal_chosen:
-            self.choose_goal()
-            start_i, start_j = self.pos
-            goal_i, goal_j = self.goal
-            path_found, last_node, length = astar_search(self.search_map, start_i, start_j, goal_i, goal_j,
-                                                         manhattan_distance)
-            self.path = make_path(last_node)[:-1]
-
-        if not self.path_exist or len(self.path) == 0:
-            return np.array(Action.WAIT.value)
-        next_pos = np.array(self.path.pop())
-        action = (next_pos - self.pos)
-        return action
-
-    def update_state_info(self, new_pos: npt.NDArray) -> None:
-        self.pos = new_pos
-
-    def send_message(self) -> Message:
-        message = Message()
-        message.pos = self.pos
-        return message
-
-    def choose_goal(self) -> None:
-        if self.goal_chosen:
-            return
-
-        start_i, start_j = self.pos
-        min_len = np.inf
-
-        for goal_i, goal_j in self.goals:
-            path_found, last_node, length = astar_search(self.search_map, start_i, start_j, goal_i, goal_j,
-                                                         manhattan_distance)
-            if not path_found:
-                continue
-            self.path_exist = True
-            if length < min_len:
-                min_len = length
-                self.goal = np.array((goal_i, goal_j))

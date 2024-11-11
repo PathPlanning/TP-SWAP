@@ -65,3 +65,7 @@ class SearchTree:
         Checks if a node has been previously expanded.
         """
         return item in self._closed
+
+    @property
+    def expanded(self):
+        return self._closed
