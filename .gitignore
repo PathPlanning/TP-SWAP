@@ -1,2 +1,6 @@
 .DS_Store
-processing/__pycache__/*
+__pycache__/
+launching/img/*.gif
+launching/img/*.mp4
+gen-scripts/**/*.xml
+gen-scripts/**/*.map

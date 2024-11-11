@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<root>
+	<experiment>
+		<timestep>1.0</timestep>
+		<xy_goal_tolerance>0</xy_goal_tolerance>
+		<max_steps>5000</max_steps>
+	</experiment>
+	<algorithm name="dec_tswap"/>
+</root>
