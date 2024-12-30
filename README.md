@@ -62,20 +62,21 @@ This repository contains tasks, experimental results, and code for generating ta
 
 ## Requirements and Installation
 
-### Main Requirements
+### Basic Requirements
 
 To use the repository, install the following software and libraries:
 
 * `wget`
 * `Python 3.11`
 * `IPython and Jupyter Notebook`
-* `setuptools`
-* `numpy`
-* `pandas`
-* `matplotlib`
-* `tqdm`
+* `setuptools` Python library
+* `numpy` Python library
+* `pandas` Python library
+* `matplotlib` Python library
+* `tqdm` Python library
+* `OpenCV` (`cv2` Python library) and and all the necessary software (codec/ffmpeg) to generate the H264 video 
 
-### Additional Libraries
+### Navigation Algorithms Libraries
 
 #### Multi-agent Navigation Library (`manavlib`)
 
